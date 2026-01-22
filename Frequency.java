@@ -1,5 +1,5 @@
-class Frequency {
 
+class Frequency {
     public static int parallelFreq(int x, int[] A, int numThreads) {
         int[] counts = new int[numThreads];
         int chunkSize = A.length / numThreads;
