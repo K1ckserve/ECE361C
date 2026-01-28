@@ -1,41 +1,60 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 class Frequency {
-    public static int parallelFreq(int x, int[] A, int numThreads) {
-        int[] counts = new int[numThreads];
-        int chunkSize = A.length / numThreads;
-        Thread[] threads = new Thread[numThreads];
+        static class FrequencySearchTask implements Callable<int[]> {
+                private int x, start, end;
+                private int[] A;
+		
+		FrequencySearchTask(int x, int[] A, int start, int end) {
+			this.x = x;
+			this.A = A;
+			this.start = start;
+			this.end = end;
+		}
+		
+		@Override
+		public int[] call() {
+			int[] chunk = new int[end - start];
+			int count = 0;
+			for (int j = start; j < end; j++) {
+				if (A[j] == x) {
+					chunk[count++] = A[j];
+				}
+			}
+			return java.util.Arrays.copyOf(chunk, count);
+		}
+	}
+        public static int parallelFreq(int x, int[] A, int numThreads) throws Exception {
+                ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+                List<Future<int[]>> futures = new ArrayList<>();
+                int partSize = A.length / numThreads;
 
-        for (int i = 0; i < numThreads; i++) {
-                final int threadId = i;
-                final int start = i * chunkSize;
-                final int end = (i == numThreads - 1) ? A.length : start + chunkSize;
-                
-                threads[i] = new Thread(() -> {
-                        for (int j = start; j < end; j++) {
-                                if (A[j] == x) counts[threadId]++;
+                for (int i = 0; i < numThreads; i++) {
+                        final int start = i * partSize;
+                        final int end;
+                        if (i == numThreads - 1) {
+                                end = A.length;
+                        } else {
+                                end = start + partSize;
                         }
-                });
-                threads[i].start();
-        }
 
-        for (Thread t : threads) {
-                try {
-                        t.join();
-                } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        futures.add(executor.submit(new FrequencySearchTask(x, A, start, end)));
                 }
+                int total = 0;
+                for (int i = 0; i < futures.size(); i++) {
+                                Future<int[]> future = futures.get(i);
+                                total += future.get().length;
+                }
+                executor.shutdown();
+                return total;
         }
 
-        int total = 0;
-        for (int count : counts) {
-                total += count;
+        public static void main(String[] args) throws Exception {
+                System.out.println("JVM is installed and working!");
         }
-        return total;
-        // your implementation goes here
-    }
-
-    public static void main(String[] args) {
-        Frequency freq = new Frequency();
-        System.out.println("JVM is installed and working!");
-    }
 }
